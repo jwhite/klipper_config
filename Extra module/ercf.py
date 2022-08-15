@@ -230,34 +230,26 @@ class Ercf:
         sensor = self.printer.lookup_object(
                     "filament_switch_sensor toolhead_sensor")
         sensor_state = bool(sensor.runout_helper.filament_present)
-        self.gcode.respond_info("Homing length is %.6f" % homing_length)
-        self.gcode.respond_info("Sensor state is %d" % sensor_state)
         if sensor_state :
             step_length = -step_length
             both_in_sync = False # Do not move the ERCF if move is an unload
-
         for step in range( int( homing_length / abs(step_length) ) + 1 ):
-            self.gcode.respond_info("Step %f" % step)
             if bool(sensor.runout_helper.filament_present) == sensor_state:
-                self.gcode.respond_info("Moved %f" % step * abs(step_length))
                 if step * abs(step_length) >= homing_length :
                     self.gcode.respond_info(
-                                    "Unable to reach the toolhead sensor moo")
+                                    "Unable to reach the toolhead sensor")
                     self.gcode.run_script_from_command(self.MACRO_UNSELECT_TOOL)
                     self.gcode.run_script_from_command(self.MACRO_PAUSE)
                     break
                 if both_in_sync :
-                    self.gcode.respond_info("Both in sync")
                     self.gear_stepper.do_set_position(0.)
                     self.gear_stepper.do_move(step_length, homing_speed, 
                                                 self.short_moves_accel, False)
                 pos = self.toolhead.get_position()
                 pos[3] += step_length
-                self.gcode.respond_inf("Doing manual move")
                 self.toolhead.manual_move(pos, homing_speed)
                 self.toolhead.dwell(0.2)
             else:
-                self.gcode.respond_inf("Wait moves")
                 self.toolhead.wait_moves()
                 self.gear_stepper.do_set_position(0.)
                 break
@@ -522,11 +514,9 @@ class Ercf:
 
     cmd_ERCF_FINALIZE_LOAD_help = "Finalize the load of a tool to the nozzle"
     def cmd_ERCF_FINALIZE_LOAD(self, gcmd):
-        self.gcode.respond_info("Finalising Load")
         length = gcmd.get_float('LENGTH', 30.0, above=0.)
         tune = gcmd.get_int('TUNE', 0)
         threshold = gcmd.get_float('THRESHOLD', 10.0, above=0.)
-        self.gcode.resond_info("Length %f tune %f threshold %f" % (length, tune, threshold))
         if length is None :
             self.gcode.respond_info("LENGTH has to be specified")
             return
